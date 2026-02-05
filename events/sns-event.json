@@ -1,0 +1,9 @@
+{
+  "Records": [
+    {
+      "Sns": {
+        "Message": "{\"source\": \"aws-cloudwatch-alarm\", \"alarm_name\": \"mock-lambda-errors\", \"alarm_description\": \"LogGroup=/aws/lambda/mock-lambda-dispatcher\", \"aws_account_id\": \"390844787410\", \"region\": \"US East (N. Virginia)\", \"state\": \"ALARM\", \"state_reason\": \"Threshold Crossed: 1 out of the last 1 datapoints [1.0] was >= 1.0\", \"state_change_time\": \"2026-02-05T18:43:00.000+0000\", \"trigger\": {\"metric_name\": \"Errors\", \"namespace\": \"AWS/Lambda\", \"dimensions\": [{\"name\": \"FunctionName\", \"value\": \"mock-lambda-dispatcher\"}]}, \"log_group\": \"/aws/lambda/mock-lambda-dispatcher\", \"error_logs\": \"\"}"
+      }
+    }
+  ]
+}

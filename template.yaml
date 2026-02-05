@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Auto-remediation pipeline Lambda function - CloudWatch + SNS + Lambda with Kilo Webhook
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: nodejs18.x
+    Environment:
+      Variables:
+        WEBHOOK_ENDPOINT: !Ref WebhookEndpoint
+        TIMEOUT_MS: !Ref TimeoutMs
+        LOG_LEVEL: INFO
+
+Parameters:
+  WebhookEndpoint:
+    Type: String
+    Description: Kilo webhook endpoint URL
+    Default: 'https://kilo-webhook.example.com/alerts'
+  TimeoutMs:
+    Type: Number
+    Description: HTTP request timeout in milliseconds
+    Default: 5000
+  AlarmEmail:
+    Type: String
+    Description: Email subscription for SNS notifications
+    Default: ''
+
+Resources:
+  # Lambda function for processing CloudWatch alarms
+  MockLambdaDispatcher:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: mock-lambda-dispatcher
+      Description: Processes CloudWatch alarms and dispatches to Kilo webhook
+      Handler: index.handler
+      CodeUri: mock-lambda-dispatcher/
+      Events:
+        SNSEvent:
+          Type: SNS
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /alerts
+            Method: post
+      Policies:
+        # Allow Lambda to invoke itself recursively if needed
+        - AWSLambdaBasicExecutionRole
+        # Allow reading from CloudWatch Logs
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+      Tags:
+        Application: auto-remediation
+        Environment: production
+        Function: dispatcher
+        Source: cloudwatch-alarm
+
+  # SNS topic for CloudWatch alarm notifications
+  AlarmSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: mock-lambda-alarm-topic
+      DisplayName: CloudWatch Alarm Notifications
+      Tags:
+        - Key: Application
+          Value: auto-remediation
+        - Key: Environment
+          Value: production
+
+  # Lambda permission for SNS invocation
+  SNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref AlarmSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref AlarmSNSTopic
+
+  # Lambda permission for SNS to invoke Lambda
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt MockLambdaDispatcher.Arn
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref AlarmSNSTopic
+
+  # CloudWatch alarm for Lambda function errors
+  LambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: mock-lambda-errors
+      AlarmDescription: Monitors Lambda function errors for mock-lambda-dispatcher
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref MockLambdaDispatcher
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmSNSTopic
+      OKActions:
+        - !Ref AlarmSNSTopic
+      InsufficientDataActions:
+        - !Ref AlarmSNSTopic
+
+  # CloudWatch alarm for Lambda invocation errors
+  LambdaInvocationErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: mock-lambda-invocation-errors
+      AlarmDescription: Monitors Lambda invocation errors for mock-lambda-dispatcher
+      Namespace: AWS/Lambda
+      MetricName: InvocationErrors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref MockLambdaDispatcher
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref AlarmSNSTopic
+      OKActions:
+        - !Ref AlarmSNSTopic
+
+  # CloudWatch alarm for Lambda throttles
+  LambdaThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: mock-lambda-throttles
+      AlarmDescription: Monitors Lambda throttles for mock-lambda-dispatcher
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref MockLambdaDispatcher
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlarmSNSTopic
+      OKActions:
+        - !Ref AlarmSNSTopic
+
+Outputs:
+  LambdaFunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt MockLambdaDispatcher.Arn
+  LambdaFunctionName:
+    Description: Name of the Lambda function
+    Value: !Ref MockLambdaDispatcher
+  SNSTopicArn:
+    Description: ARN of the SNS topic
+    Value: !Ref AlarmSNSTopic
+  APIEndpoint:
+    Description: API endpoint for direct invocation
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/alerts"
