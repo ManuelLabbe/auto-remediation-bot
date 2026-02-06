@@ -212,3 +212,9 @@ aws cloudwatch set-alarm-state \
   --profile <your-aws-profile> \
   --region us-east-1
 ```
+
+---
+
+## Future Work
+
+- **Agent Skills:** Enable the remediation agent to have configurable "skills" — structured knowledge about the AWS infrastructure architecture, coding guidelines, and business rules of the project. This additional context would allow the agent to generate more accurate and aligned solutions when creating Pull Requests, especially for domain-specific logic or organization-level conventions that cannot be inferred from code alone.
