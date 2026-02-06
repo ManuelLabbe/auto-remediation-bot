@@ -11,12 +11,12 @@ CloudWatch Alarm  →  SNS Topic  →  Forwarder Lambda  →  KiloCode Webhook
 | Service | Log Forwarding | Status |
 |---|---|---|
 | AWS Lambda | [x] Errors, Timeouts, Throttles | Supported |
-| API Gateway | [ ] 5XX Errors, Latency, Throttling | Planned |
-| DynamoDB | [ ] Throttled Reads/Writes, Capacity Errors | Planned |
-| SQS | [ ] Dead Letter Queue, Message Age | Planned |
-| Step Functions | [ ] Failed Executions | Planned |
-| EventBridge | [ ] Failed Rule Invocations | Planned |
-| S3 | [ ] 5XX Request Errors | Planned |
+| API Gateway | [ ] 5XX Errors, Latency, Throttling | Not supported |
+| DynamoDB | [ ] Throttled Reads/Writes, Capacity Errors | Not supported |
+| SQS | [ ] Dead Letter Queue, Message Age | Not supported |
+| Step Functions | [ ] Failed Executions | Not supported |
+| EventBridge | [ ] Failed Rule Invocations | Not supported |
+| S3 | [ ] 5XX Request Errors | Not supported |
 
 ## Prerequisites
 
