@@ -93,6 +93,13 @@ The specific error payload received from the monitoring system is:
 {{body}}
 ```
 
+### Production Recommendations
+
+- **Webhook Authentication:** Enable the `x-secret-webhook-secret` header in your KiloCode webhook settings to authenticate incoming requests. This prevents unauthorized payloads from triggering the remediation pipeline.
+- **Webhook Retry:** Add retry logic with exponential backoff when the webhook returns 5XX or times out, to avoid losing events due to transient failures.
+- **Dead Letter Queue:** Configure a DLQ on the forwarder Lambda so that failed events are preserved for later inspection or reprocessing instead of being silently dropped.
+- **Throttling Protection:** Add concurrency limits on the forwarder Lambda to prevent a burst of alarms from overwhelming the webhook endpoint.
+
 ## Coupling an Existing Alarm
 
 To connect any existing CloudWatch alarm to the forwarder, add the SNS topic ARN as an alarm action. This is the only change needed — no modifications to the existing infrastructure.
