@@ -23,7 +23,8 @@ def lambda_handler(event, context):
         return {"statusCode": 200, "body": "ignored"}
 
     log_group = resolve_log_group(alarm_message)
-    error_logs = fetch_error_logs(log_group) if log_group else ""
+    state_change_time = alarm_message.get("StateChangeTime")
+    error_logs = fetch_error_logs(log_group, state_change_time) if log_group else ""
 
     post_to_webhook(alarm_message, log_group, error_logs)
 
@@ -40,17 +41,23 @@ def resolve_log_group(alarm_message):
     return None
 
 
-def fetch_error_logs(log_group):
-    now = datetime.now(timezone.utc)
-    start = now - timedelta(minutes=10)
+def fetch_error_logs(log_group, state_change_time=None):
+    if state_change_time:
+        try:
+            end = datetime.fromisoformat(state_change_time.replace("+0000", "+00:00"))
+        except (ValueError, AttributeError):
+            end = datetime.now(timezone.utc)
+    else:
+        end = datetime.now(timezone.utc)
+
+    start = end - timedelta(minutes=5)
 
     try:
         response = logs_client.filter_log_events(
             logGroupName=log_group,
             startTime=int(start.timestamp() * 1000),
-            endTime=int(now.timestamp() * 1000),
-            filterPattern="ERROR",
-            limit=5,
+            endTime=int(end.timestamp() * 1000),
+            limit=20,
         )
     except Exception:
         logger.exception("Failed to fetch logs from %s", log_group)
