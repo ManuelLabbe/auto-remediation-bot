@@ -1,0 +1,67 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: CloudWatch Error Forwarder - forwards alarm events to Kilo webhook
+
+Parameters:
+  WebhookUrl:
+    Type: String
+    Default: https://hooks.kilosessions.ai/inbound/user/1eae5815-ccc8-4ba4-bbbe-761a5192a7c3/auto-remediation-bot
+    Description: Kilo webhook endpoint URL
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 128
+
+Resources:
+  ErrorAlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: error-alarm-forwarder
+
+  ErrorAlarmTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref ErrorAlarmTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudWatchPublish
+            Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref ErrorAlarmTopic
+
+  ForwarderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: forwarder/handler.lambda_handler
+      CodeUri: .
+      Description: Receives SNS alarm notifications and forwards to Kilo webhook
+      Environment:
+        Variables:
+          WEBHOOK_URL: !Ref WebhookUrl
+      Policies:
+        - Statement:
+            - Sid: AllowFilterLogEvents
+              Effect: Allow
+              Action:
+                - logs:FilterLogEvents
+              Resource: "*"
+      Events:
+        AlarmEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref ErrorAlarmTopic
+
+Outputs:
+  ErrorAlarmTopicArn:
+    Description: SNS topic ARN — point your CloudWatch alarms here
+    Value: !Ref ErrorAlarmTopic
+
+  ForwarderFunctionArn:
+    Description: Forwarder Lambda function ARN
+    Value: !GetAtt ForwarderFunction.Arn
