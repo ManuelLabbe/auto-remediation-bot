@@ -2,7 +2,7 @@ import json
 import logging
 import traceback
 
-from lambda_mock import function_a, function_b, function_c
+from . import function_a, function_b, function_c
 
 logger = logging.getLogger(__name__)
 
