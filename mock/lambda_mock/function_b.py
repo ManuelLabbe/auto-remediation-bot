@@ -10,5 +10,5 @@ def run(event):
     """
     name = event.get("name", "World")
     age = event.get("age", 0)
-    message = "Hello " + name + " age: " + age
+    message = "Hello " + name + " age: " + str(age)
     return {"message": message}
