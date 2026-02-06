@@ -5,8 +5,7 @@ Description: CloudWatch Error Forwarder - forwards alarm events to Kilo webhook
 Parameters:
   WebhookUrl:
     Type: String
-    Default: https://hooks.kilosessions.ai/inbound/user/1eae5815-ccc8-4ba4-bbbe-761a5192a7c3/auto-remediation-bot
-    Description: Kilo webhook endpoint URL
+    Description: KiloCode webhook endpoint URL (see README for setup instructions)
 
 Globals:
   Function:
